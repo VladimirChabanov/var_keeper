@@ -1,0 +1,52 @@
+name: Pull Request To Main
+run-name: Run All Tests
+on:
+  pull_request:
+    branches:
+      - 'main'
+jobs:
+  unit_testing:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run Unit Tests
+        run: |
+          chmod +x ./test/unit-tests.sh
+          ./test/unit-tests.sh
+        
+  integration_testing:
+    needs: unit_testing
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create virtual env
+        run: python3 -m venv venv
+      - name: Install requirements
+        run: |
+          source venv/bin/activate
+          pip install -r requirements.txt
+      - name: Run app
+        run: |
+          source venv/bin/activate
+          nohup python src/app/app.py &
+          echo $! > app_pid
+      - name: Test GET-request
+        shell: bash
+        run: |
+          chmod +x ./test/integration-tests.sh
+          ./test/integration-tests.sh
+      - name: Stop app
+        run: kill -15 `cat app_pid`
+          
+  mega_hard_testing:
+    needs: [unit_testing, integration_testing]
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run Mega Hard Tests
+        run: |
+          chmod +x ./test/all-mega-hard-tests.sh
+          ./test/all-mega-hard-tests.sh
